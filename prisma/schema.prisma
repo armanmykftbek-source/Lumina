@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String
+  passwordHash  String
+  avatar        String?
+  goals         String         @default("[]") // JSON array as string for SQLite
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  channel       Channel?
+  likes         Like[]
+  subscriptions Subscription[]
+  progress      Progress[]
+  comments      Comment[]
+}
+
+model Channel {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  avatar       String?
+  banner       String?
+  verified     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  ownerId      String   @unique
+  owner        User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  videos       Video[]
+  subscribers  Subscription[]
+}
+
+model Video {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  thumbnail   String?
+  videoUrl    String
+  duration    Int       @default(0)
+  views       Int       @default(0)
+  tags        String    @default("[]") // JSON array as string
+  summary     String?
+  isPublished Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  channelId   String
+  channel     Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  chapters    Chapter[]
+  likes       Like[]
+  comments    Comment[]
+  progress    Progress[]
+  pathVideos  PathVideo[]
+}
+
+model Chapter {
+  id        String @id @default(cuid())
+  title     String
+  timestamp Int
+  videoId   String
+  video     Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoId   String
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+}
+
+model Subscription {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channelId String
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, channelId])
+}
+
+model LearningPath {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  thumbnail   String?
+  category    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  videos      PathVideo[]
+  progress    Progress[]
+}
+
+model PathVideo {
+  id       String @id @default(cuid())
+  order    Int
+
+  pathId   String
+  path     LearningPath @relation(fields: [pathId], references: [id], onDelete: Cascade)
+  videoId  String
+  video    Video        @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([pathId, videoId])
+}
+
+model Progress {
+  id          String   @id @default(cuid())
+  watchedSec  Int      @default(0)
+  completed   Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoId     String?
+  video       Video?        @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  pathId      String?
+  path        LearningPath? @relation(fields: [pathId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+  @@unique([userId, pathId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoId   String
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+}
